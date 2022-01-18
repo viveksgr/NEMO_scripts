@@ -1,0 +1,181 @@
+%% General Settings
+% Needs fullzcored.mat, crossval indices, behavioral file, argmaxes of which bases to choose. 
+
+%%%%%
+% HRF argamx (line 90) set to 1 for canonical hrfs. Reset for actual EM
+%%%%%
+
+statpath = pwd;
+s =1;
+mask_anat_name = 'None'; % 'None' for no mask. Or use 'APC','PPC','Amygdala','OFC'
+linux_config = false;
+% modelname = 'SPM_timeline'; %sprintf('%d',zz);
+warning('off','all') 
+
+% Behavior analysis settings.
+fname_behav = sprintf('behav_ratings_NEMO%02d',s); % C for chemical and 'P' for perceptual basis
+% behav_options = [];
+behav_options.pca_anal = 0.4;
+% behav_options.intercept = true; % Turn off the intercept with ridge regression
+% behav_options.orthog = true;
+% behav_options.normalization = true;% behav_options.polybase = 2;
+% % behav_options.fourier = 3;
+% behav_options.regress_orth = 2;
+% behav_options.binarize = [0 1]; % binarize(1) = threshold of binarizing. binarize(2) = first descriptor to binarize.                                      % = 3 for s_1 and 5 for s_2               
+% behav_options.rem_low = true; 
+
+normalize_vox = true;
+% lesions.pre.id  = 2;
+% lesions.pre.regress_out = true;
+% lesions.post = [1 2];
+% lesions.reapply = true;
+lesions = false;
+timing_map = false;
+
+% Visualization settings
+read_mask = false; % Read functional mask from a previous model instead of writing a new one.
+accu = true;
+
+% Regularization settings
+regul = 2; % 0 for no regression, 1 for lasso, 1.5 for elastic net, 2 for ridge, 2.5 for tikhonov
+lambda = 0.05; % Specify lambda or alpha for elastic net if no regul
+cross_vald_regul = false;
+krange = [0.01, 0.05, 0.1, 0.15, 0.2];%linspace(0.01,0.4,10); % Lambda values. Alpha values in elastic net are always 0.1:0.1:1. Change in function.
+
+% General
+% File path
+if linux_config
+    addpath('/home/vsh3681/spm12')
+    statpath = fullfile('/home/vsh3681/results', modelname);
+    addpath('/home/vsh3681/Scripts/imaging_analysis/common_functions')
+    parpool(20)
+else
+    sn = sprintf('NEMO_%02d', s);
+    root = 'C:\Data\NEMO';
+    addpath('C:\spm12')
+end 
+
+% Voxel_responses
+Odor_D = fullfile(statpath,'full_zscored_11basis_s.mat');
+load(Odor_D,'odor_responses')
+
+behav_file = fullfile(statpath,fname_behav);
+load(behav_file,'behav')
+behav.ratings(isnan(behav.ratings))=0;
+behav = analyse_behav(behav,behav_options,lesions);
+
+% Voxel and anat mask
+mask = spm_read_vols(spm_vol(fullfile(statpath, 'anat_gw.nii')));
+mask(isnan(mask))=0;
+mask_pred = logical(reshape(mask,1,[]));
+if ~strcmp(mask_anat_name,'None') % Use an anat mask
+    mask_anat_full = sprintf('%s.nii',mask_anat_name);
+    mask_anat = spm_read_vols(spm_vol(fullfile(statpath,mask_anat_full)));
+    mask_anat_stack = logical(reshape(mask_anat,1,[]));
+    mask_pred_anat = mask_anat_stack(mask_pred);
+    odor_responses = odor_responses(mask_pred_anat,:,:);
+else
+    mask_pred_anat = mask_pred;
+end
+
+% Initialize all matrices to save results
+nfolds = size(behav.ratings,1);
+nvox = size(odor_responses,1);
+ncomp = size(behav.ratings,2);
+
+test_cell = zeros(nvox,nfolds);
+pred_cell = zeros(nvox,nfolds);
+train_cell = zeros(nvox,ncomp,nfolds); % These are training weights
+load(fullfile(statpath,'argmaxes.mat'))
+argmaxes = argmaxes{1}; % Choose these time-bins from odor responses
+argmaxes(argmaxes==0) = 6;
+
+%% Folds for LOOCV
+lambda_mat = zeros(sum(mask_pred_anat));
+fold_ind_inner = crossvalind('Kfold',nfolds-1,4);
+
+odor_resp_fold = zeros(size(odor_responses,1),size(odor_responses,3));
+for ii = 1:size(odor_responses,1)
+    odor_resp_fold(ii,:)=squeeze(odor_responses(ii,argmaxes(ii),:));
+end
+
+fold_ind = 1:nfolds;
+for fold_ = fold_ind
+    %% Training and weight estimation
+    fprintf('Running fold %d \n', fold_);
+    test_mask = fold_ind==fold_; % fold_ind comes from cv_fold.mat
+    behav_tt = behav.ratings(test_mask,:);
+     
+    % Validation step - estimate the argmax across second dim for maximum
+    % prediction accuracy.
+    % --------------------------------------------------------------------
+    tr_sets = setdiff(unique(fold_ind),fold_);
+  
+    odor_resp_tt = odor_resp_fold(:,test_mask);
+    odor_resp_tr = odor_resp_fold(:,~test_mask);
+    behav_tr = behav.ratings(~test_mask,:);
+    test_cell(:,fold_) =  odor_resp_tt;
+    
+    if normalize_vox
+        mean_tr = nanmean(odor_resp_tr,2);
+        std_tr = nanstd(odor_resp_tr,[],2);
+        odor_resp_tr = (odor_resp_tr-repmat(mean_tr,1,size(odor_resp_tr,2)))./repmat(std_tr,1,size(odor_resp_tr,2)); % Broadcasting not available for old version of MATLAB on quest
+        odor_resp_tt = (odor_resp_tt-repmat(mean_tr,1,size(odor_resp_tt,2)))./repmat(std_tr,1,size(odor_resp_tt,2));
+    end
+    
+    switch regul
+        case 2 % Ridge regularization
+            for ii = 1:size(odor_resp_tr,1)
+                if cross_vald_regul
+                    lambda = max_lambda(odor_resp_tr(ii,:)',behav_tr,fold_ind_inner,krange,2);
+                    lambda_mat(ii,fold_) = lambda;
+                end
+                train_cell(ii,:,fold_) = ridge(odor_resp_tr(ii,:)',behav_tr,lambda);
+                pred_cell(ii,fold_) = squeeze(train_cell(ii,:,fold_))*behav_tt';
+            end
+    end
+end
+
+corr_voxel_final = iter_corr(pred_cell,test_cell);
+mask_header = spm_vol(fullfile(statpath, 'anat_gw.nii'));
+[mask,XYZmm] = spm_read_vols(mask_header);
+mask(isnan(mask))=0;
+XYZvx = round(mask_header.mat\[XYZmm; ones(1,size(XYZmm,2))]);
+XYZvx(end,:)=[];
+voxel_id = XYZvx(:,mask_pred);
+sizer_ = size(mask);
+corr_voxel_3d = nii_reshaper(corr_voxel_final,voxel_id,sizer_);
+corr_voxel_3d(~logical(mask))=nan;
+scorr_voxel_3d = nansmooth3(corr_voxel_3d);
+
+% Correct for multiple comparisons and store p_value
+corr_pval = corr_voxel_3d(logical(mask));
+for ii = 1:length(corr_pval)
+    corr_pval(ii) = r2p(corr_pval(ii),size(behav.ratings,1));
+end
+p_thresh = fdr_benjhoc(corr_pval);
+if p_thresh
+    r_thresh = atanh(r2t(p_thresh,size(behav.ratings,1)));
+else
+    fprintf('No p_thresh found with FDR correction!!!');
+    r_thresh = r2t(0.01,size(behav.ratings,1));
+end
+fprintf('Threshold for 0.05 fdr: %f', r_thresh);
+
+% Smoothing
+scorr_voxel_3d = atanh(scorr_voxel_3d); % z-transformed
+scorr_pval = scorr_voxel_3d(logical(mask));
+for ii = 1:length(scorr_pval)
+    scorr_pval(ii) = r2p(scorr_pval(ii),size(behav.ratings,1));
+end
+sp_thresh = fdr_benjhoc(scorr_pval);
+sr_thresh = atanh(r2t(p_thresh,size(behav.ratings,1)));
+
+% % New_p_vals
+% anatpath_ = fullfile('C:\Data\NEMO\',sprintf('NEMO_%02d',s),'\imaging\nii\masks');
+% allmask = spm_read_vols(spm_vol(
+
+save(fullfile(statpath,mask_anat_name))
+write_reshaped_nifty(corr_voxel_3d,statpath,false,'anat_gw.nii'); % Actual correlation
+write_reshaped_nifty(scorr_voxel_3d,statpath,false,'anat_gw.nii'); % Smoothened
+

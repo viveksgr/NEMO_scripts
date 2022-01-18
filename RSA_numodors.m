@@ -1,0 +1,554 @@
+%% General Settings
+% Model path
+s =1; % Subject
+hrf_bases_id = 6; % Load HRF from peak_win seconds
+num_od = 5:5:160;
+statpath = pwd;
+
+ofile = 'full_zscored_11basis_s'; % Odor file
+norm_ofile = true;
+hrf_ids = [1 1 1 1];
+maskfile =  'anat_gw.nii';
+mask = (spm_read_vols(spm_vol(fullfile(statpath, maskfile)))); % Mask used to construct odor files
+mask(isnan(mask))=0;
+% mask(mask<0.1)=0;
+mask = logical(mask);
+fmaskfile = 'f_anat_gw3.nii';
+fmask = (spm_read_vols(spm_vol(fullfile(statpath, fmaskfile)))); % Mask used to examine voxels in RSA
+fmask(isnan(fmask))=0;
+fmask = logical(fmask);
+fmask_1d = fmask(mask);
+
+behav_file = fullfile(statpath,sprintf('behav_ratings_NEMO%02d.mat',s));
+behav_filec = fullfile(statpath,sprintf('behav_ratings_NEMO%02dC.mat',s));
+anat_names = {'APC','PPC','Amygdala','OFC'};
+anat_masks = {'rwAPC.nii', 'rwPPC.nii','rwAmygdala.nii','rwofc.nii'};
+anatpath = fullfile('C:\Data\NEMO\',sprintf('NEMO_%02d',s),'\imaging\nii\masks');
+nanat = length(anat_names);
+
+% Model names
+masks_set = [];
+for ii = 1:length(anat_masks)
+    m1 = spm_read_vols(spm_vol(fullfile(anatpath,anat_masks{ii})));
+    m1(m1<=0)=0;
+    m1(m1>0) = 1;
+    m1 = m1(mask);
+    masks_set(:,ii)=m1(fmask_1d);
+    nvoxS(ii) = sum(m1(fmask_1d))./sum(m1);
+end
+masks_set(isnan(masks_set))=0;
+linux_config = false;
+warning('off','all')
+
+% Behavior analysis settings
+chem_or_per = 'P'; % C for chemical and 'P' for perceptual basis
+behav_options.normalization = true;
+lesions.post = false;
+
+if linux_config
+    modelname = '';
+    addpath('/home/vsh3681/spm12')
+    statpath = fullfile('/home/vsh3681/results', modelname);
+    addpath('/home/vsh3681/Scripts/imaging_analysis/common_functions')
+    parpool(20)
+else
+    root = 'C:\Data\NEMO';
+    addpath('C:\spm12')
+end
+
+% Voxel_responses
+Odor_D = fullfile(statpath,ofile);
+load(Odor_D,'odor_responses_nn','odor_responses')
+odor_responses = odor_responses_nn;
+
+% Behav-data. Perceptual ratings
+load(behav_file,'behav')
+behav.ratings(isnan(behav.ratings))=0;
+behavP = analyse_behav(behav,behav_options,lesions);
+load(behav_filec) % Chemical ratings
+%% Bootstrap on odor pairs
+% Make odor IDs for bootstrap and number analysis
+
+% Classic sampling with replacement
+nboot = 1000;
+dfs = arrayfun(@(x) nchoosek(x,2),num_od);
+y = 1:1:dfs(end);
+oid_mat = cell(1,length(num_od));
+for oo = 1:length(num_od)
+    oid_temp = zeros(nboot,dfs(oo));
+    for zz = 1:nboot
+        oid_temp(zz,:) = datasample(1:dfs(end),dfs(oo));
+    end
+    oid_mat{oo} = oid_temp;
+end
+
+% Classic sampling without replacement
+% nboot = 50;
+% num_odors = 160; % Total odors
+% y = 1:1:num_odors;
+% oid_mat = cell(1,length(num_od));
+% for oo = 1:length(num_od)
+%     oid_temp = zeros(nboot,num_od(oo));
+%     for zz = 1:nboot
+%         oid_temp(zz,:) = randperm(num_odors,num_od(oo));
+% %         oid_temp(zz,:) = datasample(1:num_odors,num_od(oo));
+%     end
+%     oid_mat{oo} = oid_temp;
+% end
+
+% Predictions
+Pred_M = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for percept
+Pred_MC = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for chem
+test_sig = zeros(nanat,length(num_od));
+ 
+for oo = 1:length(num_od)
+    bootsam = oid_mat{oo}';
+    for ii =1:nanat
+        Odor_mat = squeeze(odor_responses(fmask_1d,hrf_bases_id,:));
+        odor_vals = Odor_mat(logical(masks_set(:,ii)),:);
+        [r,~] = find(isnan(odor_vals));
+        odor_vals(r,:) = [];
+        for foldid = 1:nboot
+            foldind = ismember(y,bootsam(:,foldid));          
+            % RSMs
+            Behav_RSM_P = corrcoef(behavP.ratings');
+            utl_mask = logical(triu(ones(size(Behav_RSM_P)),1));
+            a_ = Behav_RSM_P(utl_mask); % Perceptual RSM
+            Behav_RSM_C = corrcoef(behav.ratings');
+            b_ = Behav_RSM_C(utl_mask); % Chemical RSM
+            % ab = a_.*b_;
+%             [a_,b_,ab,t] = var_partitioner(a_,b_);
+            odor_vals_temp = odor_vals;
+            odor_corr = corrcoef(odor_vals_temp);
+            odor_corr_vals = odor_corr(utl_mask); % Neural RSM
+            
+            Pred_M(ii,foldid,oo) = fastcorr(odor_corr_vals(foldind),a_(foldind));
+            Pred_MC(ii,foldid,oo) = fastcorr(odor_corr_vals(foldind),b_(foldind));       
+        end      
+        test_sig(ii,oo) = bstrap_hyp(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+    end
+end
+
+% figure('Position',  [100, 100, 640, 480])
+% hold on
+% for ii = 1:nanat
+%     subplot(2,2,ii)
+%     hold on
+%     shaded_plot(num_od,mean(squeeze(Pred_M(ii,:,:)),1),std(squeeze(Pred_M(ii,:,:)),1),'r')
+%     shaded_plot(num_od,mean(squeeze(Pred_MC(ii,:,:)),1),std(squeeze(Pred_MC(ii,:,:)),1),'b')
+%     ylabel('Representational r')
+%     legend({'perceptual','-','chemical','-'})
+%     title(anat_names{ii})
+% end
+% savefig('ROI_RSM_odorline.fig')
+% print(fullfile(statpath,'odorline'),'-dpng')
+% 
+% Plot t_scores
+figure('Position',  [100, 100, 640, 480])
+hold on
+for ii = 1:nanat
+    subplot(2,2,ii)
+    hold on
+    t1 = tanh(mean(atanh(squeeze(Pred_M(ii,:,:))),1));
+    [~,tsc1] = r2p(t1,dfs);
+    t2 = tanh(mean(atanh(squeeze(Pred_MC(ii,:,:))),1));
+    [~,tsc2] = r2p(t2,dfs);
+    plot(num_od,tsc1,'r')
+    plot(num_od,tsc2,'b')
+    yl = ylim;
+    area(num_od,yl(2)*double(test_sig(ii,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+    ylabel('Representational t-value')
+    legend({'perceptual','chemical'})
+    title(anat_names{ii})
+end
+savefig('ROI_RSM_odorline_t.fig')
+print(fullfile(statpath,'odorline_t'),'-dpng')
+
+% Final t-score plot for OFC
+figure('Position',  [100, 100, 320, 240])
+hold on
+t1 = tanh(mean(atanh(squeeze(Pred_M(4,:,:))),1));
+[~,tsc1] = r2p(t1,dfs);
+t2 = tanh(mean(atanh(squeeze(Pred_MC(4,:,:))),1));
+[~,tsc2] = r2p(t2,dfs);
+plot(num_od,tsc1,'r')
+plot(num_od,tsc2,'b')
+area(num_od,250*double(test_sig(4,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+ylabel('Representational t-value')
+legend({'perceptual','chemical'})
+title(anat_names{ii})
+savefig('ROI_RSM_odorline_ofc.fig')
+print(fullfile(statpath,'odorline_ofc'),'-dpng')
+save(fullfile(statpath,'odorline.mat'))
+
+% figure('Position',[0.5 0.5 320 240])
+% bar(nvoxS)
+% xticklabels(anat_names)
+% xtickangle(90)
+% title('Sig. odor-evoked voxels')
+% savefig('nvoxes')
+% print(fullfile(statpath,'nvoxes'),'-dpng')
+
+%% Average across subjects
+% Run previous sections for any subject
+statpath = pwd;
+num_od = 5:5:160;
+nanat = 4;
+dfs = arrayfun(@(x) nchoosek(x,2),num_od);
+nboot = 10000;
+num_odors = 160; % Total odors
+
+dirs = {'C:\Data\NEMO\NEMO_01\imaging\1stlevelmodels\RSA_nodors';
+    'C:\Data\NEMO\NEMO_02\imaging\1stlevelmodels\RSA_FIR';
+    'C:\Data\NEMO\NEMO_04\imaging\1stlevelmodels\RSA_FIR'};
+% dirs = {'C:\Data\NEMO\NEMO_01\imaging\1stlevelmodels\RSA_nodors\category\boot_odor_category';
+%     'C:\Data\NEMO\NEMO_02\imaging\1stlevelmodels\RSA_FIR\category\num_odors_worep';
+%     'C:\Data\NEMO\NEMO_04\imaging\1stlevelmodels\RSA_FIR\category\n_odors'};
+matname = 'odorline.mat';
+anat_names = {'PirF','PirT','AMY','OFC'};
+Pred_M = variable_extract(dirs,matname,'Pred_M',false);
+Pred_MC = variable_extract(dirs,matname,'Pred_MC',false);
+
+% Concat matrices
+Pred_M = cat(4,Pred_M{:});
+% Pred_M = mean(Pred_M,4);
+Pred_MC = cat(4,Pred_MC{:});
+% Pred_MC = mean(Pred_MC,4);
+
+t1 = squeeze(mean(Pred_M(4,:,:,:),2));
+t2 = squeeze(mean(Pred_MC(4,:,:,:),2));
+% zsc = (atanh(t1)-atanh(t2))./sqrt(2./(dfs'-3));
+for ii = 1:3
+    for oo = 1:length(num_od)
+        [~,deltar(oo,ii)] = r2p(sqrt(t1(oo,ii).^2-t2(oo,ii).^2),dfs(oo));
+    end
+end
+plot(num_od,t1.^2-t2.^2)
+
+% Concat matrices
+Pred_M = mean(Pred_M,4);
+Pred_MC = mean(Pred_MC,4);
+% Hypothesis testing
+test_sig = zeros(nanat,length(num_od));
+for oo = 1:length(num_od)
+    for ii =1:nanat   
+        test_sig(ii,oo) = bstrap_hyp(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+    end
+end
+% 
+% figure('Position',  [100, 100, 320, 240])
+% hold on
+% for ii = 4
+% %     subplot(2,2,ii)
+%     hold on
+%     t1 = tanh(mean(atanh(squeeze(Pred_M(ii,:,:))),1));
+%     [~,tsc1] = r2p(t1,dfs);
+%     t2 = tanh(mean(atanh(squeeze(Pred_MC(ii,:,:))),1));
+%     [~,tsc2] = r2p(t2,dfs);
+%     plot(num_od,tsc1,'r')
+%     plot(num_od,tsc2,'b')
+%     yl = ylim;
+%     area(num_od,yl(2)*double(test_sig(ii,:)<0.025),'FaceColor','k','FaceAlpha',0.2)
+%     ylabel('Representational t-value')
+%     legend({'perceptual','chemical'})
+%     title(anat_names{ii})
+% end
+% savefig('ROI_RSM_odorline_t.fig')
+% print(fullfile(statpath,'odorline_t'),'-dpng')
+
+% Plot delta t-score
+figure('Position',  [100, 100, 320, 240])
+hold on
+for ii = 4:4
+    hold on
+%     subplot(2,2,ii)
+
+    t_vec = test_sig(ii,:); % For t-score
+    t_vec(t_vec==0)=1/10000;
+    tsc = tinv(1-t_vec,dfs);
+%     tsc = t_vec;
+%     tsc =  atanh(sqrt(mean(t1,2).^2-mean(t2,2).^2)).*sqrt(dfs-3)';
+    
+   plot(num_od,tsc,'r')
+    hold on
+    tsc(test_sig(ii,:)>0.025)=nan;
+   plot(num_od,tsc,'b','linewidth',1)
+    ylabel('Representational t-value')
+    xlabel('No. of odors')
+    title(anat_names{ii})
+end
+
+
+% % For a single area:
+% % Concat matrices
+% Pred_M = mean(Pred_M,1);
+% Pred_MC = mean(Pred_MC,1);
+% 
+% test_sig = zeros(nanat,length(num_od));
+% for oo = 1:length(num_od)
+%     for ii =1:1
+%         test_sig(ii,oo) = bstrap_hyp(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+%     end
+% end
+% 
+% figure('Position',  [100, 100, 640, 480])
+% hold on
+% for ii = 1:1
+%     hold on
+%     t1 = tanh(mean(atanh(squeeze(Pred_M(ii,:,:))),1));
+%     [~,tsc1] = r2p(t1,dfs);
+%     t2 = tanh(mean(atanh(squeeze(Pred_MC(ii,:,:))),1));
+%     [~,tsc2] = r2p(t2,dfs);
+%     plot(num_od,tsc1,'r')
+%     plot(num_od,tsc2,'b')
+%     yl = ylim;
+%     area(num_od,yl(2)*double(test_sig(ii,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+%     ylabel('Representational t-value')
+%     legend({'perceptual','chemical'})
+% end
+savefig('ROI_RSM_odorline_allareas.fig')
+print(fullfile(statpath,'odorline_allareas'),'-dpng')
+
+%% Bootstrap odors for percept vs chemical
+% Make odor IDs for bootstrap and number analysis
+
+% Classic sampling with replacement
+
+dfs = arrayfun(@(x) nchoosek(x,2),num_od);
+
+nboot = 10000;
+num_odors = 160; % Total odors
+y = 1:1:num_odors;
+oid_mat = cell(1,length(num_od));
+for oo = 1:length(num_od)
+    oid_temp = zeros(nboot,num_od(oo));
+    for zz = 1:nboot
+%         oid_temp(zz,:) = randperm(num_odors,num_od(oo));
+        oid_temp(zz,:) = datasample(1:num_odors,num_od(oo));
+    end
+    oid_mat{oo} = oid_temp;
+end
+
+% Predictions
+Pred_M = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for percept
+Pred_MC = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for chem
+test_sig = zeros(nanat,length(num_od));
+ 
+for oo = 1:length(num_od)
+    bootsam = oid_mat{oo}';
+    for ii =4
+        Odor_mat = squeeze(odor_responses(fmask_1d,hrf_bases_id,:));
+        odor_vals = Odor_mat(logical(masks_set(:,ii)),:);
+        [r,~] = find(isnan(odor_vals));
+        odor_vals(r,:) = [];
+        for foldid = 1:nboot
+            foldind = ismember(y,bootsam(:,foldid));          
+            % RSMs
+            Behav_RSM_P = corrcoef(behavP.ratings(foldind,:)');
+            utl_mask = logical(triu(ones(size(Behav_RSM_P)),1));
+            a_ = Behav_RSM_P(utl_mask); % Perceptual RSM
+            Behav_RSM_C = corrcoef(behav.ratings(foldind,:)');
+            b_ = Behav_RSM_C(utl_mask); % Chemical RSM
+
+            odor_vals_temp = odor_vals;
+            odor_corr = corrcoef(odor_vals_temp(:,foldind));
+            odor_corr_vals = odor_corr(utl_mask); % Neural RSM
+            
+            Pred_M(ii,foldid,oo) = fastcorr(odor_corr_vals,a_);
+            Pred_MC(ii,foldid,oo) = fastcorr(odor_corr_vals,b_);       
+        end      
+        test_sig(ii,oo) = bstrap_hyp(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+    end
+end
+
+% figure('Position',  [100, 100, 640, 480])
+% hold on
+% for ii = 1:nanat
+%     subplot(2,2,ii)
+%     hold on
+%     shaded_plot(num_od,mean(squeeze(Pred_M(ii,:,:)),1),std(squeeze(Pred_M(ii,:,:)),1),'r')
+%     shaded_plot(num_od,mean(squeeze(Pred_MC(ii,:,:)),1),std(squeeze(Pred_MC(ii,:,:)),1),'b')
+%     ylabel('Representational r')
+%     legend({'perceptual','-','chemical','-'})
+%     title(anat_names{ii})
+% end
+% savefig('ROI_RSM_odorline.fig')
+% print(fullfile(statpath,'odorline'),'-dpng')
+% 
+% % Plot t_scores
+% figure('Position',  [100, 100, 640, 480])
+% hold on
+% for ii = 1:nanat
+%     subplot(2,2,ii)
+%     hold on
+%     t1 = tanh(mean(atanh(squeeze(Pred_M(ii,:,:))),1));
+%     [~,tsc1] = r2p(t1,dfs);
+%     t2 = tanh(mean(atanh(squeeze(Pred_MC(ii,:,:))),1));
+%     [~,tsc2] = r2p(t2,dfs);
+%     plot(num_od,tsc1,'r')
+%     plot(num_od,tsc2,'b')
+%     yl = ylim;
+%     area(num_od,yl(2)*double(test_sig(ii,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+%     ylabel('Representational t-value')
+%     legend({'perceptual','chemical'})
+%     title(anat_names{ii})
+% end
+% savefig('ROI_RSM_odorline_t.fig')
+% print(fullfile(statpath,'odorline_t'),'-dpng')
+
+% Final t-score plot for OFC
+figure('Position',  [100, 100, 320, 240])
+hold on
+t1 = tanh(mean(atanh(squeeze(Pred_M(4,:,:))),1));
+[~,tsc1] = r2p(t1,dfs);
+t2 = tanh(mean(atanh(squeeze(Pred_MC(4,:,:))),1));
+[~,tsc2] = r2p(t2,dfs);
+plot(num_od,tsc1,'r')
+plot(num_od,tsc2,'b')
+area(num_od,250*double(test_sig(4,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+ylabel('Representational t-value')
+legend({'perceptual','chemical'})
+title(anat_names{ii})
+savefig('ROI_RSM_odorline_ofc.fig')
+print(fullfile(statpath,'odorline_ofc'),'-dpng')
+
+
+save(fullfile(statpath,'odorline.mat'))
+
+%% Non-parametric estim. percept vs chemical
+% Make odor IDs for bootstrap and number analysis
+
+dfs = arrayfun(@(x) nchoosek(x,2),num_od);
+nboot = 1000;
+num_odors = 160; % Total odors
+y = 1:1:num_odors;
+oid_mat = cell(1,length(num_od));
+for oo = 1:length(num_od)
+    oid_temp = zeros(nboot,num_od(oo));
+    for zz = 1:nboot
+        oid_temp(zz,:) = randperm(num_odors,num_od(oo));
+%         oid_temp(zz,:) = datasample(1:num_odors,num_od(oo));
+    end
+    oid_mat{oo} = oid_temp;
+end
+
+% Predictions
+Pred_M = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for percept
+Pred_MC = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for chem
+test_sig = zeros(nanat,length(num_od));
+ 
+for oo = 1:length(num_od)
+    bootsam = oid_mat{oo}';
+    for ii = 4
+        Odor_mat = squeeze(odor_responses(fmask_1d,hrf_bases_id,:));
+        odor_vals = Odor_mat(logical(masks_set(:,ii)),:);
+        [r,~] = find(isnan(odor_vals));
+        odor_vals(r,:) = [];
+        for foldid = 1:nboot
+            foldind = ismember(y,bootsam(:,foldid));          
+            % RSMs
+            Behav_RSM_P = corrcoef(behavP.ratings(foldind,:)');
+            utl_mask = logical(triu(ones(size(Behav_RSM_P)),1));
+            a_ = Behav_RSM_P(utl_mask); % Perceptual RSM
+            Behav_RSM_C = corrcoef(behav.ratings(foldind,:)');
+            b_ = Behav_RSM_C(utl_mask); % Chemical RSM
+
+            odor_vals_temp = odor_vals;
+            odor_corr = corrcoef(odor_vals_temp(:,foldind));
+            odor_corr_vals = odor_corr(utl_mask); % Neural RSM
+            
+            Pred_M(ii,foldid,oo) = fastcorr(odor_corr_vals,a_);
+            Pred_MC(ii,foldid,oo) = fastcorr(odor_corr_vals,b_);       
+        end      
+        test_sig(ii,oo) = bstrap_hyp(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+    end
+end
+
+% Final t-score plot for OFC
+figure('Position',  [100, 100, 320, 240])
+hold on
+t1 = tanh(mean(atanh(squeeze(Pred_M(4,:,:))),1));
+[~,tsc1] = r2p(t1,dfs);
+t2 = tanh(mean(atanh(squeeze(Pred_MC(4,:,:))),1));
+[~,tsc2] = r2p(t2,dfs);
+plot(num_od,tsc1,'r')
+plot(num_od,tsc2,'b')
+area(num_od,250*double(test_sig(4,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+ylabel('Representational t-value')
+legend({'perceptual','chemical'})
+title(anat_names{ii})
+savefig('ROI_RSM_odorline_ofc.fig')
+print(fullfile(statpath,'odorline_ofc'),'-dpng')
+save(fullfile(statpath,'odorline.mat'))
+
+%% Boot category vs identity
+% Make odor IDs for bootstrap and number analysis
+
+dfs = arrayfun(@(x) nchoosek(x,2),num_od);
+nboot = 10000;
+num_odors = 160; % Total odors
+y = 1:1:num_odors;
+oid_mat = cell(1,length(num_od));
+for oo = 1:length(num_od)
+    oid_temp = zeros(nboot,num_od(oo));
+    for zz = 1:nboot
+%         oid_temp(zz,:) = randperm(num_odors,num_od(oo));
+        oid_temp(zz,:) = datasample(1:num_odors,num_od(oo));
+    end
+    oid_mat{oo} = oid_temp;
+end
+
+% Predictions
+Pred_M = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for percept
+Pred_MC = zeros(nanat,nboot,length(num_od)); % Matrix of predictions for chem
+test_sig = zeros(nanat,length(num_od));
+ 
+for oo = 1:length(num_od)
+    bootsam = oid_mat{oo}';
+    for ii = 4
+        Odor_mat = squeeze(odor_responses(fmask_1d,hrf_bases_id,:));
+        odor_vals = Odor_mat(logical(masks_set(:,ii)),:);
+        [r,~] = find(isnan(odor_vals));
+        odor_vals(r,:) = [];
+        for foldid = 1:nboot
+            foldind = ismember(y,bootsam(:,foldid));          
+            % RSMs
+            Behav_RSM_P = corrcoef(behavP.ratings(foldind,3:end)');
+            utl_mask = logical(triu(ones(size(Behav_RSM_P)),1));
+            a_ = Behav_RSM_P(utl_mask); % Perceptual RSM
+                      
+            B_dist = pdist(behavP.ratings(foldind,3:end),@maxcorrdist);
+            B_dist_mat = squareform(B_dist);
+            b_ = 1-B_dist_mat(utl_mask);
+%             Behav_RSM_C = corrcoef(behav.ratings(foldind,:)');
+%             b_ = Behav_RSM_vals_C(utl_mask); % Chemical RSM or Category RSM
+
+            odor_vals_temp = odor_vals;
+            odor_corr = corrcoef(odor_vals_temp(:,foldind));
+            odor_corr_vals = odor_corr(utl_mask); % Neural RSM
+            
+            Pred_M(ii,foldid,oo) = fastcorr(odor_corr_vals,a_);
+            Pred_MC(ii,foldid,oo) = fastcorr(odor_corr_vals,b_);       
+        end      
+        test_sig(ii,oo) = bstrap_hyp_2(squeeze(Pred_M(ii,:,oo)),squeeze(Pred_MC(ii,:,oo)));
+    end
+end
+
+% Final t-score plot for OFC
+figure('Position',  [100, 100, 320, 240])
+hold on
+t1 = tanh(mean(atanh(squeeze(Pred_M(4,:,:))),1));
+[~,tsc1] = r2p(t1,dfs);
+t2 = tanh(mean(atanh(squeeze(Pred_MC(4,:,:))),1));
+[~,tsc2] = r2p(t2,dfs);
+plot(num_od,t1.^2-t2.^2,'r')
+% plot(num_od,tsc1,'r')
+% plot(num_od,tsc2,'b')
+yl = ylim;
+area(num_od,yl(2)*double(test_sig(4,:)<0.05),'FaceColor','k','FaceAlpha',0.2)
+ylabel('Representational r sq')
+legend({'identity','category'})
+title(anat_names{ii})
+savefig('ROI_RSM_odorline_sq.fig')
+print(fullfile(statpath,'odorline_ofc'),'-dpng')
+save(fullfile(statpath,'odorline.mat'))
