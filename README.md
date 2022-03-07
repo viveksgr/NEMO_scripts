@@ -6,6 +6,8 @@ Dependencies:
 1. SPM12: https://www.fil.ion.ucl.ac.uk/spm/software/spm12/
 
 Workflow:
+1. task_scripts
+Scripts to run the perceptual rating task.
 1. Behav_process: 
 Scripts to analyze the perceptual and chemical properties of the odors.
 2. Basic preprocess:
