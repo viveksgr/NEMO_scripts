@@ -1,5 +1,9 @@
 %% General Settings
-% To run this,
+% Major inputs:
+% A sesswise estimate of odor responses: full_zscored_sess<sess_number>_old
+% of shape voxels x hrf bases x odors.
+% Gray matter masks of ROIs.
+
 vsn = 0;
 fmasker = true; % Only select files with significant odor evoked activity.
 anat_names = {'APC','PPC','Amygdala','OFC'};

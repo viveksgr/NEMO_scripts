@@ -1,5 +1,13 @@
 %% General Settings
 
+% Major inputs:
+% Needs fullzcored.mat: Matrix of voxels x HRF bases x Odors
+% behav.mat: behavioral file with behav.ratings = odors x perceptual bases
+% Gray matter masks of ROIs
+% anat_gw.nii: A binary mask of gray matter voxels such that number of
+% voxels in fullzscored.mat = sum(anat_gw,'all')
+
+
 % Model path
 s =4; % Subject
 modelname = 'classic_chem';

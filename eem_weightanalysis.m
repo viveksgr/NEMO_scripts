@@ -1,5 +1,15 @@
 %% Analyze the prediction accuracy map and break it down by sub regions
 % Analyze argmaxes (time-basis) for different brain regions for different descriptors.
+
+% Major inputs:
+% Output file ('None.mat') of EEM_LOOCV.
+% Needs fullzcored.mat: Matrix of voxels x HRF bases x Odors
+% behav.mat: behavioral file with behav.ratings = odors x perceptual bases
+% Gray matter masks of ROIs
+% anat_gw.nii: A binary mask of gray matter voxels such that number of
+% voxels in fullzscored.mat = sum(anat_gw,'all')
+
+
 s = 2; % Subject
 model_comp = true;
 argmax_comp = false;

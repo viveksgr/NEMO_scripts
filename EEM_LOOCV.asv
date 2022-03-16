@@ -1,10 +1,8 @@
 %% General Settings
 % Inputs:
 % Needs fullzcored.mat: Matrix of voxels x HRF bases x Odors
-% behav.mat: behavioral file with behav.ratings = odors x perceptual bases
-% argmaxes.mat: If not fully crossvalidating, the index of which hrf bases to choose. 
-% anat_gw.nii: A binary mask of gray matter voxels such that number of
-% voxels in fullzscored.mat = sum(anat_gw,'all')
+%  crossval indices, behavioral file, argmaxes of which bases to choose. 
+
 
 statpath = pwd;
 s =1;
