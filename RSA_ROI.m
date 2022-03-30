@@ -1,7 +1,7 @@
 %% General Settings
 
 % Major inputs:
-% Needs fullzcored.mat: Matrix of voxels x HRF bases x Odors
+% Needs fullmat.mat: Matrix of voxels x HRF bases x Odors
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
 % Gray matter masks of ROIs
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
@@ -10,7 +10,7 @@
 
 % Model path
 
-s =4; % Subject
+s =1; % Subject
 modelname = 'classic_chem';
 
 statpath = pwd;
@@ -20,14 +20,13 @@ chem_dister_regress = false;
 nboot = 10000;
 load_boot = true;
 
-lesions = false; %.post= [1 2];
+lesions = false; %.post= [1 2]; Regress out intensity or pleasantness
 sz_cntrl = false; % Equal num of voxels chosen.
-sz_sam = 35; % Choose a minimum of 35 voxels
+sz_sam = 35; % Choose a minimum of x voxels
 load_normals = false; % Load orthogonalized bases rather than calculating them
 use_normals = false; % Only for load_normals = false
 
-b_r_t = 'b'; % 'b' for standardized coefficients, t = tscore, r = partial r sq.
-ofile = 'full_zscored_11basis_s'; % Odor file
+ofile = 'fullmat'; % matrix of voxels x HRF bases x Odors
 norm_ofile = true;
 hrf_ids = [1 1 1 1];
 maskfile =  'anat_gw.nii';
@@ -247,14 +246,12 @@ for ii = 1:length(anat_names)
     plot([ii-edges1,ii-edges2-0.05],[corr_voxel_final_p1(ii,1),corr_voxel_final_p1(ii,1)],'k');
     plot([ii-edges2+0.025,ii+edges2-0.025],[corr_voxel_final_p1(ii,2),corr_voxel_final_p1(ii,2)],'k');
     plot([ii+edges2+0.05,ii+edges1],[corr_voxel_final_p1(ii,3),corr_voxel_final_p1(ii,3)],'k');
-    if strcmp(b_r_t,'b')
         plot([ii-edges1,ii-edges2-0.05],[corr_voxel_final_p2(ii,1),corr_voxel_final_p2(ii,1)],'k');
         plot([ii-edges2+0.025,ii+edges2-0.025],[corr_voxel_final_p2(ii,2),corr_voxel_final_p2(ii,2)],'k');
         plot([ii+edges2+0.05,ii+edges1],[corr_voxel_final_p2(ii,3),corr_voxel_final_p2(ii,3)],'k');
         plot([ii+(-edges1-edges2-0.05)/2,ii+(-edges1-edges2-0.05)/2],[corr_voxel_final_p1(ii,1),corr_voxel_final_p2(ii,1)],'k');
         plot([ii,ii],[corr_voxel_final_p1(ii,2),corr_voxel_final_p2(ii,2)],'k');
         plot([ii+(edges1+edges2+0.05)/2,ii+(edges1+edges2+0.05)/2],[corr_voxel_final_p1(ii,3),corr_voxel_final_p2(ii,3)],'k');
-    end
 end
 yl = ylim;
 ylim([0 yl(2)])

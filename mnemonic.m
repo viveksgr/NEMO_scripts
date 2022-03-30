@@ -15,7 +15,7 @@ dirs = {'C:\Data\NEMO\NEMO_01\imaging\1stlevelmodels\Mnemonic';
     'C:\Data\NEMO\NEMO_02\imaging\1stlevelmodels\Mnemonic';
     '';'C:\Data\NEMO\NEMO_04\imaging\1stlevelmodels\Mnemonic'};
 
-nperm = 1000;
+nperm = 10000;
 nodor = 160;
 [~,bootsam] = bootstrp(nperm,@(x) x,1:nodor);
 utl_mask_diag = logical(eye(nodor));

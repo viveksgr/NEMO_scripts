@@ -22,5 +22,7 @@ Representational Similarity Analysis (for chemical vs perceptual and category vs
 Performance of RSA as a function of number of odors
 7. EEM_LOOCV:
 The encoding model to predict odor responses using perceptual descriptors
-8. group_plots:
+8. EEM_dimensionality:
+Performance of EM for different ROI, dimensionality estimates and subjectivity analysis.
+9. EEM_subjectivity:
 Performance of EM for different ROI, dimensionality estimates and subjectivity analysis.

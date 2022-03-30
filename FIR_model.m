@@ -25,7 +25,7 @@ sess_i = 3; % Initial session (for all sets)
 sess_f = 3; % Final session (for all sets). Use sess_i == sess_f for sesswise data
 modelname = 'NEMO02_can_sess03';
 nruns = {[1:4],[1:4],[1:4],[1:4]}; % Run indices used in each set
-name_chunk = 'full_zscored.mat';
+name_chunk = 'fullmat.mat';
 nodors = 160; % Number of odors
 exec_model = true; % Compute bases. False, if only compiing precomputed bases.
 sniff_contrast = true; % Create a contrast for sniff-evoked activity
@@ -202,12 +202,8 @@ end
 
 %% Compile model
 if compile_model
-    statpath = fullfpath;
-    
-    file_list = dir(fullfile(statpath,sprintf('beta*.nii')));
-    
-    
-    
+    statpath = fullfpath;   
+    file_list = dir(fullfile(statpath,sprintf('beta*.nii')));   
     mask = spm_read_vols(spm_vol(fullfile(statpath,'anat_gw.nii')));
     mask(isnan(mask))=0;
     mask = logical(mask);
@@ -235,9 +231,8 @@ if compile_model
             for kk = 1:dims3
                 if mask(ii,jj,kk)~=0
                     odor_resp = spm_get_data(file_V,[ii;jj;kk]);
-                    odor_responses2(ii,jj,kk,:) = zscore(odor_resp);
                     odor_responses(ii,jj,kk,:) = (odor_resp);
-                    %                       odor_responses(ii,jj,kk,:) = zscore(odor_resp(ii,jj,kk,:));
+                    % odor_responses2(ii,jj,kk,:) = zscore(odor_resp);
                 end
             end
         end
@@ -251,15 +246,15 @@ if compile_model
     for ii = 1:length(voxel_ids)
         [xx,yy,zz]  = ind2sub(size(mask),voxel_ids(ii)); % Index of the mask
         two_D_(ii,:) = odor_responses(xx,yy,zz,:);
-        two_D_nn(ii,:) = odor_responses2(xx,yy,zz,:);
+%         two_D_nn(ii,:) = odor_responses2(xx,yy,zz,:);
     end
     
     % Add third dimension (of bases function used)
     odor_responses = zeros(size(two_D_,1),nfir_comp,ceil(size(two_D_,2)/nfir_comp));
-    odor_responses_nn = zeros(size(two_D_,1),nfir_comp,ceil(size(two_D_,2)/nfir_comp));
+%     odor_responses_nn = zeros(size(two_D_,1),nfir_comp,ceil(size(two_D_,2)/nfir_comp));
     if hrf_basestype
         odor_responses(:,1,:) = two_D_;
-        odor_responses_nn(:,1,:) = two_D_nn;
+%         odor_responses_nn(:,1,:) = two_D_nn;
     else
         r_count = 0:(n_bases/nfir_comp)-1;
         for ii = 1:length(voxel_ids)

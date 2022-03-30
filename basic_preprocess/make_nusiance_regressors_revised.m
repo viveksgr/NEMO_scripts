@@ -1,4 +1,5 @@
 % Make nuisance regressors and align breathing and behavioral data
+
 %% Basic Settings
 linux_config = false; % Run on windows or quest
 if linux_config
@@ -243,77 +244,3 @@ for set_ = set_1:nsets
     end
 end
 
-% % Merge breathing traces if accidentally paused recording.
-% if ~linux_config
-%     % Break into two matrices
-%     M1 = [];
-%     M3 = [];
-%     for ii = 1:6
-%         M1 = [M1; data(datastart(ii,1):dataend(ii,1))];
-%         M3 = [M3; data(datastart(ii,2):dataend(ii,2))];
-%     end
-%     % ------- Manually change breathing trace start point for M3
-%     M3(4,1:100) = M3(4,100);
-%     % Create appropriate filler
-%     % First create time series - this needs to be done manually
-%     T_series = (0:1:size(M1,2)-1)./samplerate(1);
-%     spike_thresh = 1; % Manually choose this threshold
-%     t_lastspike_s1 = find(M1(5,:)>1,1,'last'); % Last TR trigger in series1
-%     t_firstspike_s2 = find(M3(5,:)>1,1); % First TR trigger in series2
-%
-%     % Manually check that 2TRs have elapsed during pause.
-%     % Solve this: (length(M1)-t_lastspike_s1)+time_gap+t_firstspike_s2 =
-%     % 2800 (2*TR --- choose this manually)
-%     time_gap = 2800-(length(M1)-t_lastspike_s1)-t_firstspike_s2;
-%     T_series2 = (1:1:time_gap)/1000+T_series(end); % Timeseries across gap
-%     T_series3 = (1:1:length(M3))/1000+T_series2(end); % Timeseries of second recording
-%
-%     % Interpolated data
-%     M2 = [];
-%     for ii=[1:3 5]
-%         M2(ii,:) = (M1(ii,end)+M3(ii,1))/2*(ones(1,length(T_series2)));
-%     end
-%
-% %     % Try interpolation
-% %     % Interpolated breathing data
-% %     M2(4,:)= interp1([T_series T_series3],[M1(4,:) M3(4,:)],T_series2,'pchip');
-%
-%     % Take a standard breathing trial - check visually
-%     breathing_clip = M3(4,1385:3952);
-%     b_start = find_nearest(breathing_clip,M1(4,end));
-%     b_end = find_nearest(breathing_clip(1001:end),M3(4,1))+1000;
-%     breathing_ = breathing_clip(b_start:b_end);
-%     M2(4,:)=interp1(linspace(1,100,length(breathing_)),breathing_,linspace(1,100,length(T_series2)));
-%
-%     % M_plot example
-%     M_before = M1(4,end-10000:end);
-%     M_after = M3(4,1:10000);
-%     M = [M_before M2(4,:) M_after];
-%     plot(M)
-%     hold on
-%     plot([10000 10000],[-0.03 0.06],'r')
-%     plot([10000+length(M2) 10000+length(M2)],[-0.03 0.06],'r')
-%
-%     % Interp for spiro data
-%     M2(6,:)= interp1([T_series T_series3],[M1(6,:) M3(6,:)],T_series2,'pchip');
-%     M_before = M1(6,end-10000:end);
-%     M_after = M3(6,1:10000);
-%     M = [M_before M2(6,:) M_after];
-%     plot(M)
-%     hold on
-%     plot([10000 10000],[-0.05 0.02],'r')
-%     plot([10000+length(M2) 10000+length(M2)],[-0.05 0.02],'r')
-%
-%     % Join the 3 matrices
-%     M = [M1 M2 M3];
-%     M_sharp = M';
-%     data = M_sharp(:)';
-%     datastart = [];
-%     dataend = [];
-%
-%     for ii = 1:6
-%         datastart = [datastart; (ii-1)*length(M)+1];
-%         dataend = [dataend; ii*length(M)]
-%     end
-% end
-%

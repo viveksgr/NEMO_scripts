@@ -15,8 +15,8 @@ warning('off','all')
 
 % Behavior analysis settings.
 fname_behav = sprintf('behav_ratings_NEMO%02d',s); % C for chemical and 'P' for perceptual basis
-behav_options = [];
-% behav_options.pca_anal = 0.4;
+% behav_options = [];
+behav_options.pca_anal = 0.4;
 % behav_options.intercept = true; % Turn off the intercept with ridge regression
 % behav_options.orthog = true;
 % behav_options.normalization = true;% behav_options.polybase = 2;

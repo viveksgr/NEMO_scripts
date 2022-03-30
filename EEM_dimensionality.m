@@ -149,12 +149,7 @@ scorr_mask = scorr_mask(fmask_1d);
 scorr_mask = scorr_mask(mask_anat)>sr_thresh;
 train_mat = sig_anat_tr(scorr_mask,:,:); % Training wt matrix
 
-if ~tscorer
-    graph_nodes = mean(train_mat,3);
-    if kmeans_pos_pregraph
-        graph_nodes = abs(graph_nodes);
-    end
-else
+
 %     if kmeans_pos
 %         train_mat = abs(train_mat);
 %     end
@@ -164,7 +159,7 @@ else
     if kmeans_pos_pregraph
         graph_nodes = abs(graph_nodes);
     end
-end
+
 
 if ~kmediods_
     A = pdist(graph_nodes,'correlation');
@@ -546,19 +541,13 @@ mind_mat = [];
 for nn = 1:length(anat_masks)
     temp_array = abs(train_mat(gp_id2==nn,:,:));
     % Plotting
-    if ~tscorer
-        bars = mean(temp_array,3);
-        std_vox = std(temp_array,[],3)./sqrt(size(train_mat,3));
-        errs = rms(std_vox,1);
-        err2 = std(mean(temp_array,3))./sqrt(size(temp_array,1));
-        errs = 1.96*(err2);
-    else
+
         bars_ = mean(temp_array,3);
         err_ = std(temp_array,[],3);
         bars_ = bars_./(err_);
         err2 = std(bars_)./sqrt(size(bars_,1));
-        errs = 1.96*(err2);
-    end
+%         errs = 1.96*(err2);
+
     
     % Anova measurements
     [~,~,stats_] = anova1(bars_,[],'off');
