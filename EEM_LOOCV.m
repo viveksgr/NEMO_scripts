@@ -1,10 +1,10 @@
 %% General Settings
 % Inputs:
-% fullzcored.mat: Matrix of voxels x HRF bases x Odors
+% fullmat.mat: Matrix of voxels x HRF bases x Odors
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
 % argmaxes.mat: If not fully crossvalidating, the index of which hrf bases to choose. 
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
-% voxels in fullzscored.mat = sum(anat_gw,'all')
+% voxels in fullmat.mat = sum(anat_gw,'all')
 
 statpath = pwd;
 s =1;
@@ -53,7 +53,7 @@ else
 end 
 
 % Voxel_responses
-Odor_D = fullfile(statpath,'full_zscored_11basis_s.mat');
+Odor_D = fullfile(statpath,'fullmat.mat');
 load(Odor_D,'odor_responses')
 
 behav_file = fullfile(statpath,fname_behav);
@@ -133,6 +133,7 @@ for fold_ = fold_ind
     end
 end
 
+%% Visualization
 corr_voxel_final = iter_corr(pred_cell,test_cell);
 mask_header = spm_vol(fullfile(statpath, 'anat_gw.nii'));
 [mask,XYZmm] = spm_read_vols(mask_header);

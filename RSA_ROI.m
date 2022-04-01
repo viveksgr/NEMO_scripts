@@ -5,16 +5,12 @@
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
 % Gray matter masks of ROIs
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
-% voxels in fullzscored.mat = sum(anat_gw,'all')
-
-
-% Model path
+% voxels in fullmat.mat = sum(anat_gw,'all')
 
 s =1; % Subject
 modelname = 'classic_chem';
-
 statpath = pwd;
-dister = false; % Change correlation to max correlation. For checking odor category vs identity representation.
+dister = false; % Check perceptual vs chemical if false. Check category vs identity if false.
 check_pos = false; % Is correlation driven by pos values?
 chem_dister_regress = false;
 nboot = 10000;
@@ -25,7 +21,6 @@ sz_cntrl = false; % Equal num of voxels chosen.
 sz_sam = 35; % Choose a minimum of x voxels
 load_normals = false; % Load orthogonalized bases rather than calculating them
 use_normals = false; % Only for load_normals = false
-
 ofile = 'fullmat'; % matrix of voxels x HRF bases x Odors
 norm_ofile = true;
 hrf_ids = [1 1 1 1];
@@ -45,7 +40,6 @@ behav_file = fullfile(statpath,sprintf('behav_ratings_NEMO%02d.mat',s));
 anat_names = {'APC','PPC','Amygdala','OFC'};
 anat_masks = {'rwAPC.nii', 'rwPPC.nii','rwAmygdala.nii','rwofc.nii'};
 anatpath = fullfile('C:\Data\NEMO\',sprintf('NEMO_%02d',s),'\imaging\nii\masks');
-
 % Model names
 masks_set = [];
 for ii = 1:length(anat_masks)
@@ -126,11 +120,11 @@ end
 % Bootstrap CV around peak
 anat_idx = [true(1,4)]; % Analyze these ROIs
 peak_wins = 1;
-P = [6 6 6 6; 5 5 6 6; 5 4 6 6; 4 4 6 6];
+P = [6 6 6 6; 5 5 6 6; 5 4 6 6; 4 4 6 6]'; % Compute RSA on peak HRF (check manually)
  peak_wins_ = P(:,s);
+ 
 % peak_wins = 1:3;
 % peak_wins_ = [4:6; 4:6; 4:6; 4:6];
-
 % peak_wins_ = [6; 5; 5; 4];
 % Define train-test split at x%
 if load_normals
@@ -170,12 +164,10 @@ end
 corr_voxel_final_t1 = zeros(length(anat_names),3);
 corr_voxel_final_p1 = zeros(length(anat_names),3);
 corr_voxel_final_p2 = zeros(length(anat_names),3);
-
 p_mat_tr = zeros(length(anat_names),size(bootsam,2)); % Hyperparam for perceptual
 c_mat_tr = zeros(length(anat_names),size(bootsam,2));
 pc_mat_tr = zeros(length(anat_names),size(bootsam,2));
-
-p_mat_tt = zeros(length(anat_names),size(bootsam,2)); % Hyperparam for perceptual
+p_mat_tt = zeros(length(anat_names),size(bootsam,2)); 
 c_mat_tt = zeros(length(anat_names),size(bootsam,2));
 pc_mat_tt = zeros(length(anat_names),size(bootsam,2));
 
@@ -264,15 +256,6 @@ mkdir(fullfile(statpath,modelname));
 savefig(fullfile(statpath,modelname,'ROI_RSM_r2.fig'))
 print(fullfile(statpath,modelname,'ROI_RSM_r2'),'-dpng')
 
-
-% figure('Position',[0.5 0.5 320 240])
-% bar(nvoxS)
-% xticklabels(anat_names)
-% xtickangle(90)
-% title('Sig. odor-evoked voxels')
-% savefig('nvoxes')
-% print(fullfile(statpath,'nvoxes'),'-dpng')
-
 M_c = [];
 for jj = 1:length(anat_names) % Num areas
     t1 = p_mat_tt(jj,:);
@@ -281,7 +264,7 @@ for jj = 1:length(anat_names) % Num areas
 end
 save(fullfile(statpath,modelname,'ROI.mat'))
 
-%% Subject level analysis. P:C ratio and stats
+%% Group level analysis. P:C ratio and stats
 dirs = {'C:\Data\NEMO\NEMO_01\imaging\1stlevelmodels\RSA_FIR\classic_chem';
         'C:\Data\NEMO\NEMO_02\imaging\1stlevelmodels\RSA_FIR\classic_chem';
         'C:\Data\NEMO\NEMO_04\imaging\1stlevelmodels\RSA_FIR\classic_chem'};
@@ -308,25 +291,6 @@ err_mat = squeeze(std(mean_b_mat_,1))';
 % % b_mat = cat(2,b_mat1(:,1,:),b_mat2(:,1,:));
 % mean_b_mat_ = cat(2,mean_b_mat_1(:,1,:),mean_b_mat_2(:,1,:));
 % std_b_mat_ = cat(2,std_b_mat_1(:,1,:),std_b_mat_2(:,1,:));
-%-------------------------------------------------------------------------
-
-% bar_mean = p_mat;
-% bar_std = err_mat;
-% figure()
-% bar(bar_mean)
-% hold on
-% ngroups = size(bar_mean, 1);
-% nbars = size(bar_mean, 2);
-% % Calculating the width for each bar group
-% groupwidth = min(0.8, nbars/(nbars + 1.5));
-% for i = 1:nbars
-%     x = (1:ngroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*nbars);
-%     errorbar(x, bar_mean(:,i), bar_std(:,i), 'k.');
-% end
-% legend({'Perceptual','Chemical'})
-% xticklabels({'S01', 'S02', 'S03'})
-% savefig('PC_interaction')
-% print(fullfile('PC_interaction'),'-dpng')
 
 %--------------------- Mean subject ratings-------------------------------
 mean_b_mat = mean(mean_b_mat_,3);
@@ -357,7 +321,6 @@ bar_mean = mean_b_mat;
 bar_std = M;
 bar_std2 = M2;
 
-
 figure('Position',[0.5 0.5 480 320])
 bar(bar_mean)
 hold on
@@ -387,22 +350,6 @@ end
 ylabel('Representational r')
 savefig('anat_pfm')
 print('anat_pfm','-dpng')
-
-
-% %AIC
-% bar_cat = 
-
-% Subject wise tests
-% M2 = [];
-% for mm = 1:3
-%     for jj = 1:size(B_mat,1) % Num areas
-%         t1 = squeeze(B_mat(jj,1,:,mm));
-%         t2 = squeeze(B_mat(jj,2,:,mm));
-%         t_sq = mean(t1)-mean(t2);
-%         tdist = (t1-t2)-mean(t1-t2);
-%         M2(mm,jj) = (100-invprctile(tdist,t_sq))/100;
-%     end
-% end
     
 % Group test for pairwise P:C 
 M_c = [];
@@ -467,5 +414,4 @@ savefig('RSA_var')
 print(fullfile('RSA_var'),'-dpng')
 % [~,p]=corr(M_bar',[1:4]','Type','Spearman')
 save(fullfile('ROI_std2.mat'))
-
 save('RSA_pvals')

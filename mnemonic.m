@@ -1,6 +1,6 @@
 %% General Settings
 % Major inputs:
-% A sesswise estimate of odor responses: full_zscored_sess<sess_number>_old
+% A sesswise estimate of odor responses: fullmat_sess<sess_number>_old
 % of shape voxels x hrf bases x odors.
 % Gray matter masks of ROIs.
 
@@ -69,14 +69,10 @@ for s = [1 2 4] % Subject
             sess2 = squeeze(sess_l(zz_i,2,s));
             
             % Voxel_responses
-            % S1 = load(fullfile(statpath,sprintf('full_zscored_sess%02d_old.mat',sess1)),'odor_responses');
-            % S1_odors = squeeze(S1.odor_responses(:,1,:));
-            % S2 = load(fullfile(statpath,sprintf('full_zscored_sess%02d_old.mat',sess2)),'odor_responses');
-            % S2_odors = squeeze(S2.odor_responses(:,1,:));
-            S1 = load(fullfile(statpath,sprintf('full_zscored_sess%02d_old.mat',sess1)),'odor_responses');
+            S1 = load(fullfile(statpath,sprintf('fullmat_sess%02d_old.mat',sess1)),'odor_responses');
             S1_odors = squeeze(S1.odor_responses(:,1,:));
             S1_odors = S1_odors(:,boot_vec);
-            S2 = load(fullfile(statpath,sprintf('full_zscored_sess%02d_old.mat',sess2)),'odor_responses');
+            S2 = load(fullfile(statpath,sprintf('fullmat_sess%02d_old.mat',sess2)),'odor_responses');
             S2_odors = squeeze(S2.odor_responses(:,1,:));
             S2_odors = S2_odors(:,boot_vec);
             %% Decoding analysis
