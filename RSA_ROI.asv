@@ -23,9 +23,8 @@
 
 % Major outputs:
 % p_mat_tt: representational similarity (bootstrapped, and for different
-% ROIs) for perceptual properties or odor category
-% c_mat_tt: representational similarity (bootstrapped, and for different
-% ROIs) for chemical properties or odor identity
+% ROIs) for perceptual properties or odor
+
 % Vivek Sagar (VivekSagar2016@u.northwestern.edu). April 9, 2022
 
 %% Settings

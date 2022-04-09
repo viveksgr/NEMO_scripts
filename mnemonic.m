@@ -1,9 +1,18 @@
-%% General Settings
+%% Pattern discriminability of odors
 % Major inputs:
-% A sesswise estimate of odor responses: fullmat_sess<sess_number>_old
-% of shape voxels x hrf bases x odors.
-% Gray matter masks of ROIs.
+% fullmat_sess<sess_number>_old: A sesswise estimate of odor responses 
+% of shape voxels x hrf bases x odors. Estimated from FIR_model.m
+% maskfile: mask of gray matter voxels in the whole brain
+% anat_masks: masks of ROIs in native space of subjects.
+% fmaskfile: functional mask of voxels with significant odor evoked
+% activity (obtained from FIR_model.m, sniff_contrast = true)
 
+% Major output:
+% rsa_P1: A matrix specifying bootstrapped estimates of pattern
+% discriminability of odors for all areas and averaged across subejcts and sessions.
+
+% Vivek Sagar (VivekSagar2016@u.northwestern.edu). April 9, 2022
+%% Settings
 vsn = 0;
 fmasker = true; % Only select files with significant odor evoked activity.
 anat_names = {'APC','PPC','Amygdala','OFC'};

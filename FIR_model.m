@@ -1,17 +1,18 @@
+%% Voxel-wise estimate of odor responses
 % FIR Model to extract scalar response per voxel per odor for a range of
 % times.
 
 % Specify:
-% Path to preprocessed T2 images
-% Path to nuisance regressors
-% Path to behavioral dataset
-% Gray matter mask
+% datapath: Path to preprocessed T2 images and nuisance regressors
+% behavpath: Path to behavioral dataset
+% breathpath: Path to breathing data
+% statpath: Gray matter mask and save location of betamaps
 
 % Output
-% NxTxO matrix (<name_chunk>) for N voxels in the Gray matter mask, T times
+% name_chunk: NxTxO matrix for N voxels in the Gray matter mask, T times
 % and O odors. For canonical HRF, T =1.
 
-% Vivek Sagar. Jan-18-2022
+% Vivek Sagar (VivekSagar2016@u.northwestern.edu). April 9, 2022
 
 %% Settings
 s = 2; % Subject
@@ -38,7 +39,6 @@ root = 'C:\Data\NEMO'; % Windows Version
 addpath('C:\spm12')
 statpath = fullfile(root, sn, 'imaging', '1stlevelmodels', modelname);
 fullfpath = statpath;
-
 
 if hrf_basestype
     n_bases = length(horzcat(nruns{:}))*10*(set_f-set_i+1);
@@ -231,7 +231,7 @@ if compile_model
             for kk = 1:dims3
                 if mask(ii,jj,kk)~=0
                     odor_resp = spm_get_data(file_V,[ii;jj;kk]);
-                    odor_responses(ii,jj,kk,:) = (odor_resp);
+                    odor_responses(ii,jj,kk,:) = (odor_resp); % Compile unzscored beta maps
                     % odor_responses2(ii,jj,kk,:) = zscore(odor_resp);
                 end
             end
