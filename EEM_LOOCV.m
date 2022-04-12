@@ -1,4 +1,7 @@
-%% General Settings
+%% The Encoding Model
+% Construct encoding model to predict neural responses as a linear function
+% of behavioral descriptors
+
 % Inputs:
 % fullmat.mat: Matrix of voxels x HRF bases x Odors
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
@@ -6,11 +9,17 @@
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
 % voxels in fullmat.mat = sum(anat_gw,'all')
 
+% Outputs:
+% corr_voxel_3d: A 3d voxel map in subject's native space specifying the prediction accuracy of the
+% model.
+
+% Vivek Sagar (VivekSagar2016@u.northwestern.edu). April 9, 2022
+
+%% General Settings
 statpath = pwd;
 s =1;
-mask_anat_name = 'None'; % 'None' for no mask. Or use 'APC','PPC','Amygdala','OFC'
+mask_anat_name = 'EEM'; % 'EEM' for no mask. Or use 'APC','PPC','Amygdala','OFC' for restricting analysis to a single ROI
 linux_config = false;
-% modelname = 'SPM_timeline'; %sprintf('%d',zz);
 warning('off','all') 
 
 % Behavior analysis settings.
@@ -168,10 +177,6 @@ for ii = 1:length(scorr_pval)
 end
 sp_thresh = fdr_benjhoc(scorr_pval);
 sr_thresh = atanh(r2t(p_thresh,size(behav.ratings,1)));
-
-% % New_p_vals
-% anatpath_ = fullfile('C:\Data\NEMO\',sprintf('NEMO_%02d',s),'\imaging\nii\masks');
-% allmask = spm_read_vols(spm_vol(
 
 save(fullfile(statpath,mask_anat_name))
 write_reshaped_nifty(corr_voxel_3d,statpath,false,'anat_gw.nii'); % Actual correlation

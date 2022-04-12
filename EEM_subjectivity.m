@@ -1,5 +1,18 @@
-% Computation of subjectivity of encoding weights
-%% ROI wise subjectivity - bootstrapped
+%% Estimation of subjectity of the encoding model 
+% Compute the inter-subject variability of the encoding model across
+% different anatomical areas
+
+% Major inputs:
+% Output file ('EEM.mat') of EEM_LOOCV.
+% Needs fullmat.mat: Matrix of voxels x HRF bases x Odors
+% behav.mat: behavioral file with behav.ratings = odors x perceptual bases
+% Gray matter masks of ROIs
+% anat_gw.nii: A binary mask of gray matter voxels such that number of
+% voxels in fullmat.mat = sum(anat_gw,'all')
+
+%------------ Documentation is in progress -------------------------------
+
+%% General settings
 % Order of PCs not maintained during bootstrap. Hence, correlation among
 % PCs for a given ROI for a given subject ~= 0. Also, PCs computed on all
 % 18 descriptors not on common descriptors

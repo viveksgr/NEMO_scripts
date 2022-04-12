@@ -1,6 +1,6 @@
 %% Dimensionality analysis of the Encoding Model
 % Perform basic visualization and comnpute dimensionality of encoding of
-% the encoding model.
+% th encoding model.
 
 % Major inputs:
 % Output file ('EEM.mat') of EEM_LOOCV.
@@ -9,10 +9,6 @@
 % Gray matter masks of ROIs
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
 % voxels in fullmat.mat = sum(anat_gw,'all')
-
-%------------ Documentation is in progress -------------------------------
-
-%% General settings
 
 s = 1; % Subject
 root = 'C:\Data\NEMO';
@@ -53,7 +49,6 @@ masks_set(isnan(masks_set))=0;
 % all_masks = sum(masks_set,4);
 
 %% Model comp
-% Visualize subjectwise model performance
 mask_scores = cell(length(anat_masks),1);
 mask_tw = cell(length(anat_masks));
 
@@ -85,7 +80,7 @@ for ii = 1:size(gp,1)
     end
 end
 
-%% Dimensionality analysis (subject-wise) - general settings
+%% Dimensionality analysis (subject-wise)
 % Mask flow:
 % "mask" to convert 3d to 1d with nvox  = gray matter voxels across all ROIs.
 % fmask_1d to find vox with sig sniff activity
@@ -123,7 +118,7 @@ for ii = 1:size(gp,1)
     end
 end
 
-%% Dimensionality estimation
+%% 2(a) Complexity estimation
 c = categorical(behav.percepts);
 n_cutoff = 10000; % Bootstrap 10000 samples
 ndescrip = 12; % Max number of components examined. Must be less than  or equal to 18.
@@ -152,7 +147,7 @@ for nn = 1:length(anat_masks)
             end
         end
     else
-        nvox = 25; % Default size for dimensionality analysis
+        nvox = 25;
         bootsam = zeros(nvox,n_cutoff);
         for zz = 1:n_cutoff
             bootsam(:,zz) = datasample(1:size(bars_,1),nvox)';
@@ -228,6 +223,64 @@ for x1 = 1:4
 end
 save('stats.mat','M')
 
+
+%% 2(b) Functional maps
+figure()
+set(gcf, 'Position',  [100, 100, 1200, 200])
+hold on
+rank_order = []; % Rank of descriptors
+rank_count = []; % Num voxels in each ROI
+bar_mat = {};
+mind_mat = [];
+for nn = 1:length(anat_masks)
+    temp_array = abs(train_mat(gp_id2==nn,:,:));
+    % Plotting
+    bars_ = mean(temp_array,3);
+    err_ = std(temp_array,[],3);
+    bars_ = bars_./(err_);
+    % For group plots, change s.e.m to C.I.
+    errs = std(bars_)./sqrt(size(bars_,1));
+    
+    % Anova measurements
+    [~,~,stats_] = anova1(bars_,[],'off');
+    [c_,m] = multcompare(stats_,'Display','off');
+    % Check means (m) with number of descriptors that are different.
+    c_sq = squareform(c_(:,6));
+    c_sq(c_sq<0.05)=nan;
+    c_sq(~isnan(c_sq))=0;
+    c_sq(isnan(c_sq))=1;
+    c_sq = c_sq-eye(size(c_sq));
+    [m_sort, m_ind] = sort(m(:,1),'descend'); % Sorted index of significant percepts
+    sig_vectors = c_sq(m_ind(end),:);
+    sig_vectors = sig_vectors(m_ind);
+    
+    bars = mean(bars_);
+    subplot(1,4,nn)
+    hold on
+    bar(1:length(behav.percepts),(bars(m_ind)))
+    errorbar(1:length(behav.percepts), bars(m_ind),errs(m_ind),'k.')
+    xticks(1:length(behav.percepts))
+    xticklabels(behav.percepts(m_ind))
+    xtickangle(90)
+    title(sprintf('%s: Num Comp: %02d, nVox: %02d',anat_names{nn},p_count(nn),size(temp_array,1)))
+    yl = ylim;
+    %     sig_vectors
+    area(1:length(c),4*yl(2)*sig_vectors,'FaceColor','k','FaceAlpha',0.2)
+    ylim(yl)
+    [~,rank_order(nn,:)] = sort(m_ind);
+    rank_count(nn) = size(temp_array,1);
+    bar_mat{nn} = bars_;
+    mind_mat = [mind_mat m_ind];
+end
+
+if size_control
+    save('eem_weights_sz.mat')
+else
+    save('eem_weights.mat')
+end
+
+savefig('anat_percepts')
+print('anat_percepts','-dpng')
 
 %% Subject-level visualization -------------------------------------------
 

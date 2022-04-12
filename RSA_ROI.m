@@ -4,7 +4,7 @@
 % 2. odor category vs odor identity.
 
 % Major inputs:
-% Needs fullmat.mat: Matrix of voxels x HRF bases x Odors from FIR_model.m
+% fullmat.mat: Matrix of voxels x HRF bases x Odors from FIR_model.m
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
 % chem_corr.mat: correlation matrix of odors based on chemical properties
 % Gray matter masks of ROIs
