@@ -3,26 +3,20 @@
 % different anatomical areas
 
 % Major inputs:
-% Output file ('EEM.mat') of EEM_LOOCV.
-% Needs fullmat.mat: Matrix of voxels x HRF bases x Odors
+% Output file ('EEM_weights_boot.mat') of EEM_dimensionality.m
 % behav.mat: behavioral file with behav.ratings = odors x perceptual bases
 % Gray matter masks of ROIs
 % anat_gw.nii: A binary mask of gray matter voxels such that number of
 % voxels in fullmat.mat = sum(anat_gw,'all')
-
-%------------ Documentation is in progress -------------------------------
+% swampsunset.m: A custom colormap
 
 %% General settings
-% Order of PCs not maintained during bootstrap. Hence, correlation among
-% PCs for a given ROI for a given subject ~= 0. Also, PCs computed on all
-% 18 descriptors not on common descriptors
-% load('C:\Data\NEMO\NEMO_all\EM\ROI_subjectivity_PC\ROI_settings.mat')
-
+% Subject directories with output from EEM_dimensionality.m
 dirs = {'C:\Data\NEMO\NEMO_01\imaging\1stlevelmodels\FIR_EM\deg1_tscore';
     'C:\Data\NEMO\NEMO_02\imaging\1stlevelmodels\FIR_EM\deg1_tscore';
     'C:\Data\NEMO\NEMO_04\imaging\1stlevelmodels\FIR_EM\deg1_tscore'};
 matname = 'eem_weights_boot.mat';
-sz_cntrl = true;
+sz_cntrl = true; % Control for size
 anat_names = {'PirF','PirT','AMY','OFC'};
 weights_ = variable_extract(dirs,matname,'bar_mat',true);
 ndescrip = 18;
@@ -30,30 +24,17 @@ nanat = 4;
 nS = 3; %length(dirs);
 fname = 'ROI_generalizability_boot_corr';
 nboot = 10000;
-combine_weights = false; % Add APC and PPC
-% If false, S1_a.S2_a - S1_a.S2_b and so on..., where a and b are areas
 
 % Extrude common descriptors across subjects
 inds = true(3,ndescrip);
 inds(1,[11 16 18]) = false;
 inds([2 3],[16:18]) = false;
 
-if combine_weights
-    weights_comb = cell(nS,nanat);
-    for jj = 1:nS
-        weights_comb{jj,1} = cat(1,weights_{jj,1},weights_{jj,2});
-        weights_comb{jj,2} = weights_{jj,3};
-        weights_comb{jj,3} = weights_{jj,4};
-    end
-else
-    weights_comb = weights_;
-end
-
-% Weight modifier
-weights_norm = cell(size(weights_comb));
+% Alignment of descriptors across subjects
+weights_norm = cell(size(weights_));
 for ii = 1:nanat
     for jj = 1:nS
-        weights_norm{jj,ii} = weights_comb{jj,ii}(:,inds(jj,:));
+        weights_norm{jj,ii} = weights_{jj,ii}(:,inds(jj,:));
     end
 end
 
@@ -97,15 +78,20 @@ xticklabels(anat_names)
 ylabel('Consistency')
 % savefig(fname)
 % print(fname,'-dpng')
+% Statistical testing
 M_test1(1) = bstrap_hyp_2(Ms{1},Ms{2});
 M_test1(2) = bstrap_hyp_2(Ms{1},Ms{3});
 M_test1(3) = bstrap_hyp_2(Ms{1},Ms{4});
 
 %% PCA of OFC
+% Only using perceptual descriptors common in all subjects
+behav_labs = {' Intensity';' Pleasantness';' Fishy';' Burnt';' Sour';' Decayed';...
+    ' Musky';' Fruity';' Sweaty';' Cool';'Floral';' Sweet';' Warm';' Bakery';' Spicy'};
 load('C:\Data\NEMO\NEMO_all\EM\ROI_subjectivity_PC\ROI_settings.mat')
 load('C:\Data\NEMO\swampsunset.mat')
 num_pcs = 4;
-ii = 4;
+ii = 4; % ID for OFC
+% Alignment of PC components using Gale_Shapely
 reorder_pc = true;
 
 if reorder_pc
@@ -116,6 +102,7 @@ if reorder_pc
     [coeffs_cat,~,~,~,vars] = pca(w_cat);
 %         [coeffs_cat,~,~,~,vars] = pca(weights_{2,ii}(:,inds(2,:)));
 end
+
 coeffs_ = zeros(length(dirs),sum(inds(1,:)),sum(inds(1,:)));
 for jj = 1:length(dirs)
     if ~reorder_pc
@@ -143,9 +130,6 @@ for jj = 1:length(dirs)
         coeffs_(jj,:,:) =  temp_coeff(:,col_order);
     end
 end
-
-% Sort_id
-% coeffs_(:,:,[2 3 4]) = coeffs_(:,:,[3 4 2]);
 
 % Arrange the components and group similar PCs for subjects
 num_vecs = zeros(num_pcs*length(dirs),sum(inds(1,:)));
@@ -192,7 +176,7 @@ xtickangle(90)
 yticks(1:3:num_pcs*length(dirs))
 yticklabels(labels(1:3:end))
 colorbar
-colormap(CustomColormap)
+colormap(swampsunset)
 title(sprintf('Correlation PCs: %s',anat_names{ii}))
 % savefig('ofc_pc_mat')
 

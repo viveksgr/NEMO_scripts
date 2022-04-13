@@ -1,6 +1,6 @@
 # NEMO_scripts
 
-A repository for the neural encoding models of olfaction (NEMO) project. Documentation is under progress.
+A repository for the neural encoding models of olfaction (NEMO) project. 
 
 Dependencies:
 1. SPM12: https://www.fil.ion.ucl.ac.uk/spm/software/spm12/
@@ -26,3 +26,5 @@ The encoding model to predict odor responses using perceptual descriptors
 Performance of EM for different ROI, dimensionality estimates.
 9. EEM_subjectivity:
 Computation of subjectivity of encoding
+
+Documentation expansion is in progress.
