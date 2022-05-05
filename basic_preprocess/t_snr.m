@@ -1,5 +1,5 @@
-% Compute signal to noise ratio of voxels from NEMO data
-% spm defaults fmri
+% Compute temporal signal to noise ratio of the bold response 
+% Inputs: 
 
 s = 1;
 n_volumes = 856;
@@ -112,10 +112,8 @@ mstd = variable_extract(dirs,matname,'m_std',true);
 % mean_b = vertcat(mean_b{:,:});
 meaner =cellfun(@mean,mstd);
 
-mean_ = mean(meaner,1);
-std_ = 1.96*std(meaner)/sqrt(3);
-% mean_ = cellfun(@mean,mean_b_cat);
-% std_ = cellfun(@std,mean_b_cat);
+mean_ = cellfun(@mean,mean_b_cat);
+std_ = cellfun(@std,mean_b_cat);
 cs = {'r','g','b'};
 figure('Position',[0.5 0.5 300 200])
 bar(1:4,mean_)
@@ -123,11 +121,4 @@ hold on
 errorbar(1:4,mean_,std_,'.')
 for s=1:3; plot(1:4,meaner(s,:),cs{s}); end
 xticklabels(anat_names)
-
-% Stats
-% s = 1;
-% m_vec = mstd(s,1:end);
-% m_size = []; for ii=1:4; m_size{ii} = ii*ones(size(m_vec{ii})); end
-% [p,~,opt] = anova1(vertcat(m_vec{:}),vertcat(m_size{:}));
-% multcompare(opt)
 p = anova1(meaner);

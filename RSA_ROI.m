@@ -132,12 +132,11 @@ end
 anat_idx = [true(1,4)]; % Analyze these ROIs
 peak_wins = 1;
 P = [6 6 6 6; 5 5 6 6; 0 0 0 0; 4 4 6 6]'; % Compute RSA on peak HRF (check peaks manually)
- peak_wins_ = P(:,s);
+peak_wins_ = P(:,s);
  
 % peak_wins = 1:3;
 % peak_wins_ = [4:6; 4:6; 4:6; 4:6];
 % peak_wins_ = [6; 5; 5; 4];
-% Define train-test split at x%
 if load_normals
     load(fullfile(statpath,'var_partitioner.mat'));
 else
@@ -175,7 +174,7 @@ end
 corr_voxel_final_t1 = zeros(length(anat_names),3);
 corr_voxel_final_p1 = zeros(length(anat_names),3);
 corr_voxel_final_p2 = zeros(length(anat_names),3);
-p_mat_tr = zeros(length(anat_names),size(bootsam,2)); % Hyperparam for perceptual
+p_mat_tr = zeros(length(anat_names),size(bootsam,2)); 
 c_mat_tr = zeros(length(anat_names),size(bootsam,2));
 pc_mat_tr = zeros(length(anat_names),size(bootsam,2));
 p_mat_tt = zeros(length(anat_names),size(bootsam,2)); 
@@ -406,7 +405,7 @@ for jj=1:4
         ks= ks+1;
         t1 = M_bar(:,jj);
         t2 = M_bar(:,jj2);
-        M_comp_mat(ks) = bstrap_hyp(t2,t1);
+        M_comp_mat(ks) = bstrap_hyp_2(t2,t1);
     end
 end
 [~,M_comp_mat2] =fdr_benjhoc(M_comp_mat); 

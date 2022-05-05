@@ -8,10 +8,8 @@ Dependencies:
 Workflow:
 1. task_scripts
 Scripts to run the perceptual rating task.
-1. Behav_process: 
-Scripts to analyze the perceptual and chemical properties of the odors.
 2. Basic preprocess:
-Preprocessing of .nii images, generation of masks and sniff contrast, and computation of neural RSM and t-snr.
+Preprocessing of .nii images, generation of masks and sniff contrast, and computation of neural RSM and t-snr. Scripts to analyze the perceptual properties of the odors.
 3. FIR_model:
 FIR model to extract a scalar odor response for a given voxel in a subject at an instant of time.
 4. Mnemonic:
