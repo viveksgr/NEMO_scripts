@@ -1,6 +1,14 @@
-clear all
-spm fmri
+% Realignment, coregistration and smoothing of functional images. 
+% Needs a T1 reference image.
+% Folder structure is specified as follows.
+% root: parent directory for each subject
+% root>imaging>nii: all nii images
+% root>imaging>nii>set[number]>sess[number]>run[number]
+% In this dataset, there are 4 sets of 40 odors each. Each set has 3
+% sessions, and each session has 4 runs. Each run has data corresponding to
+% 10 odors or 90 trials. 
 
+%% Basic settings
 linux_config = false;
 if linux_config
     root = '/projects/p30489/Data/NEMO'; % Quest Version
@@ -9,7 +17,7 @@ else
     root = 'C:\Data\NEMO'; % Windows Version
 %   addpath('C:\spm12')
 end
-subjects = [4];
+subjects = [1];
 nsubs = length(subjects);
 
 nset_i = 1;

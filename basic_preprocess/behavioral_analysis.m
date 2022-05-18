@@ -1,5 +1,5 @@
 %% Preprocessing of perceptual ratings.
-% Major inputs: behavioral ratings stored in the format
+% Major inputs: behavioral ratings stored in the format specified by
 % task_scripts>fn_select_odor_olf.m
 
 % data_run = NX13, where N = number of trials in a given block and columns are:
@@ -27,8 +27,7 @@ nsets = set_f-set_i+1;
 sess_ = [2:4];
 nsess = length(sess_);
 n_odors_sess = 40;
-% n_trials12 = 30;
-% n_trials34 = 27;
+
 
 root = 'C:\Data\NEMO';
 % Each cell consists of results from different sets.
@@ -98,13 +97,13 @@ end
 
 %% Test retest reliability for sets
 % set_ = []; 
-% Corrections in database for sessions 1 and 3 for NEMO02, NEMO04
-set_cid{3,1}(set_cid{3,1}==1032)=1001;
-set_cid{3,1}(set_cid{3,1}==7122)=7335;
-set_cid{4,1}(set_cid{4,1}==2214)=6501;
-set_cid{4,1}(set_cid{4,1}==8174)=7937;
-set_cid{4,1}(set_cid{4,1}==8697)=556940;
-set_cid{4,1}(set_cid{4,1}==14525)=11569;
+% % Corrections in database for sessions 1 and 3 for NEMO02, NEMO04
+% set_cid{3,1}(set_cid{3,1}==1032)=1001;
+% set_cid{3,1}(set_cid{3,1}==7122)=7335;
+% set_cid{4,1}(set_cid{4,1}==2214)=6501;
+% set_cid{4,1}(set_cid{4,1}==8174)=7937;
+% set_cid{4,1}(set_cid{4,1}==8697)=556940;
+% set_cid{4,1}(set_cid{4,1}==14525)=11569;
 
 sess1_ = sess_(1);
 sess2_ = sess_(2);

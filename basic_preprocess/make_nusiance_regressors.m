@@ -1,4 +1,5 @@
-% Make nuisance regressors and align breathing and behavioral data
+% Make nuisance regressors and align breathing and behavioral data.
+% Based on realignment parameters computed from make_preprocessing_job.m
 
 %% Basic Settings
 linux_config = false; % Run on windows or quest
@@ -8,9 +9,9 @@ if linux_config
 else
     root = 'C:\Data\NEMO'; % Windows Version
 end
-subjects = [4];
+subjects = [1];
 disp = false; % Display plots
-max_badvol = 22; % How many bad volumes should be eliminated. 
+max_badvol = 22; % How many bad volumes should be eliminated. Choose a ballpark number first.
 slice_diff_ = true; % Analyze slice differences
 spiro_sw = true; 
 % Add data from spirometer as well as breathing belt. By default breathing belt is on channel 4.

@@ -7,9 +7,9 @@ Dependencies:
 
 Workflow:
 1. task_scripts
-Script (NEMO_outline.m) and additional functions to run the perceptual rating task. Requires COGENT2000. 
+Scripts to run the perceptual rating task.
 2. basic_preprocess:
-Preprocessing of .nii images (make_preprocessing_job.m), computation of nuisance parameters (make_nuisance_regressors.m), generation of masks (make_inverse_normalize_mask.m), and computation of t-snr of files (t_snr.m). Scripts to analyze the perceptual properties of the odors (behavioral_analysis.m).
+Preprocessing of .nii images, generation of masks and sniff contrast, and computation of neural RSM and t-snr. Scripts to analyze the perceptual properties of the odors.
 3. FIR_model:
 FIR model to extract a scalar odor response for a given voxel in a subject at an instant of time.
 4. Mnemonic:
@@ -25,4 +25,4 @@ Performance of EM for different ROI, dimensionality estimates.
 9. EEM_subjectivity:
 Computation of subjectivity of encoding
 
-common_functions: library of custom functions used during all parts of the analysis.
+Documentation expansion is in progress.

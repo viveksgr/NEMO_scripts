@@ -1,8 +1,8 @@
 % Compute temporal signal to noise ratio of the bold response 
-% Inputs: preprocessed T2 images from make_preprocessing_job.
+% Inputs: preprc
 
-s = 1; % Subject ID
-n_volumes = 856; % Number of volumes in each run
+s = 1;
+n_volumes = 856;
 root = 'C:\Data\NEMO'; % Windows Version
 statpath = pwd;
 
