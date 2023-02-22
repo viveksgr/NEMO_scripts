@@ -46,9 +46,10 @@ For each subject, the following files are provided:
     b. odor_names: odor ids, odor names and concentration of odors. Odor IDs can be used to compare with other studies or search for odor properties in Pubchem.
 
 Scripts may not be compatible for linux and/or MacOS. 
-Additional useful scripts not in the repository:
+Additional useful sets/scripts not in the repository:
 1. [Computing inverse percentile](https://www.mathworks.com/matlabcentral/fileexchange/41131-inverse-percentiles-of-a-sample)
 2. [Stable-marriage algorithm](https://www.mathworks.com/matlabcentral/fileexchange/44262-gale-shapley-stable-marriage-algorithm)
+
 
 Raw Data:
 Raw Data is available upon request at: https://zenodo.org/record/7636722
